@@ -11,7 +11,7 @@ contract DynamicConsent is Ownable {
 
     mapping(address => mapping(uint256 => Consent)) consents;
 
-    event AccessRequested(address indexed participant, uint256 indexed institutionId);
+    event AccessRequested(address indexed participant, uint256 indexed requesterID);
     event ConsentGranted(address indexed participant, uint256 indexed requesterID);
     event ConsentRevoked(address indexed participant, uint256 indexed requesterID);
 
