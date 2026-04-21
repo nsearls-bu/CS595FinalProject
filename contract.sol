@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-
-
 contract DecentralizedInformedConsent {
+
+    // states of the consent request
     enum ConsentStatus {
         Pending,
         Granted,
         Revoked
     }
 
+    // information about the request
     struct AccessRequest {
         uint256 requestId;
         address participant;
@@ -22,10 +23,9 @@ contract DecentralizedInformedConsent {
         uint256 updatedAt;
     }
 
-    address public owner;
-    address public intermediary;
-    // counter that generates a unique id
-    uint256 public nextRequestId;
+    address public owner;               // contract owner who can update key confiuration
+    address public intermediary;        // approved intermediary account thatis allowed to create requests
+    uint256 public nextRequestId;       // counter that generates a unique id
 
     mapping(uint256 => AccessRequest) public requests;
     mapping(address => uint256[]) private participantToRequestIds;
@@ -79,6 +79,7 @@ contract DecentralizedInformedConsent {
         _;
     }
 
+    // sets the contract owner and the initial intermediary address
     constructor(address _intermediary){
         require(_intermediary != address(0), "Invalid intermediary address");
         owner = msg.sender;
@@ -89,8 +90,10 @@ contract DecentralizedInformedConsent {
     // update the intermediary account
     function setIntermediary(address newIntermediary) external checkOwner {
         require(newIntermediary != address(0), "Invalid intermediary address");
+
         address oldIntermediary = intermediary;
         intermediary = newIntermediary;
+        
         emit IntermediaryUpdated(oldIntermediary, newIntermediary);
     }
 
@@ -110,6 +113,7 @@ contract DecentralizedInformedConsent {
 
         requestId = nextRequestId;
 
+        // store the new request on-chain
         requests[requestId] = AccessRequest({
             requestId: requestId,
             participant: participant,
@@ -125,6 +129,7 @@ contract DecentralizedInformedConsent {
         participantToRequestIds[participant].push(requestId);
         nextRequestId++;
 
+        // emit event so that the request is logged on-chain
         emit AccessRequested(
             requestId,
             participant,
@@ -136,6 +141,7 @@ contract DecentralizedInformedConsent {
         );
     }
 
+    // allows the participant to appove a pending request
     function grantConsent(uint256 requestId) external checkRequestId(requestId){
         AccessRequest storage req = requests[requestId];
 
@@ -148,6 +154,7 @@ contract DecentralizedInformedConsent {
         emit ConsentGranted(requestId, msg.sender, block.timestamp);
     }
 
+    // allows the participant to revoke a granted consent
     function revokeConsent(uint256 requestId) external checkRequestId(requestId){
         AccessRequest storage req = requests[requestId];
 
@@ -160,11 +167,8 @@ contract DecentralizedInformedConsent {
         emit ConsentRevoked(requestId, msg.sender, block.timestamp);
     }
 
+    // check whether consent is granted for a request
     function checkAccess(uint256 requestId) external view checkRequestId(requestId) returns (bool) {
         return requests[requestId].status == ConsentStatus.Granted;
-    }
-
-    function getParticipantRequestIds(address participant) external view returns(uint256[] memory){
-        return participantToRequestIds[participant];
     }
 }
