@@ -1,5 +1,7 @@
+// Creates the connection to Ethereum and the signing wallet
 const { ethers } = require("ethers");
 
+// ensuring that it is reading dotenv properly and that it is properly formatted
 console.log(
   "RPC URL length:",
   process.env.RPC_URL?.length,

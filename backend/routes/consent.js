@@ -1,14 +1,19 @@
-router.get("/:participant/:requesterID", async (req,res) => {
+// uses the database to verify if a user has consent or not
+const express = require("express");
+const router = express.Router();
 
-    const { participant, requesterID } = req.params;
+router.get("/:participant/:requesterID", async (req, res) => {
+  const { participant, requesterID } = req.params;
 
-    const result = await db.query(
-        `SELECT *
+  const result = await db.query(
+    `SELECT *
          FROM consents
          WHERE participant=$1
          AND requester_id=$2`,
-         [participant, requesterID]
-    );
+    [participant, requesterID],
+  );
 
-    res.json(result.rows[0]);
+  res.json(result.rows[0]);
 });
+
+module.exports = router;
