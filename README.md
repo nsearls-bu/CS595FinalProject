@@ -11,12 +11,23 @@
 
 ### Populating your .env file
 
+```
+ADMIN_PRIVATE_KEY=<Instruction 2>
+CONTRACT_ADDRESS=<Instruction 1>
+RPC_URL=https://eth-sepolia.g.alchemy.com/v2/<Instruction 3>
+
+DB_PASSWORD=
+DB_PORT=5432
+DB_HOST=localhost
+DB_USER=ernestorivera
+DB_NAME=postgres
+```
 1. Deploy the contract on the sepolia testnet and that will give you the contract address
 2. Get your wallet private key using metamask and clicking on the 3 dots next to the list of your addresses and follow the steps to export your private key (make sure to add 0x prefix if it isn't given to you automatically)
-3. Create an app on alchemy and copy the RPC url that ends with your api key for the RPC URL
-4. update the database section of the .env file based on information about your database
+3. Create an app on alchemy and copy the RPC url that ends with your api key for the RPC URL. Go through this: https://dashboard.alchemy.com/?a=
+4. update the database section of the .env file based on information about your database. Most likeley you will need to change DB_Name to postgres, and then run `whoami` in your terminal to get the DB_USER, and if you install postgres sql through `homebrew` you don't need a password.
 
-Also, copy the abi that you get when you compile and deploy the contract in the Remix IDE. Then, paste that abi into a json file within the abi folder.
+Also, create a file: `backend/abi/DynamicConsent.json` and copy the abi that you get when you compile and deploy the contract in the Remix IDE. Then, paste that abi into a json file within the abi folder.
 
 ## Running the app
 
