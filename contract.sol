@@ -23,18 +23,24 @@ contract DecentralizedInformedConsent {
         uint256 updatedAt;
     }
 
-    address public owner;               // contract owner who can update key confiuration
-    address public intermediary;        // approved intermediary account thatis allowed to create requests
-    uint256 public nextRequestId;       // counter that generates a unique id
+    address public owner;                   // contract owner who can update key configuration
+    // address public intermediary;         // approved intermediary account that is allowed to create requests --> not used anymore since requester is directly requesting to participant
+    uint256 public nextRequestId;           // counter that generates a unique id
 
     mapping(uint256 => AccessRequest) public requests;
     mapping(address => uint256[]) private participantToRequestIds;
 
-    // logs when approved intermediary account changes
-    event IntermediaryUpdated (
-        address indexed oldIntermediary,
-        address indexed newIntermediary
-    );
+    // to check if the requester is approved or not
+    mapping(address => bool) public approvedRequesters;
+
+    // approved requester list (for admin/study runner)
+    address[] public approvedRequesterList;
+
+    // logs when approved intermediary account changes --> not used anymore
+    // event IntermediaryUpdated (
+    //    address indexed oldIntermediary,
+    //    address indexed newIntermediary
+    //);
 
     // logs when a new access request is created
     event AccessRequested (
@@ -42,7 +48,7 @@ contract DecentralizedInformedConsent {
         address indexed participant,
         address indexed requester,
         string requesterName,
-        string dataId,
+        string dataId,          // what data they are using (if participant have multiple data) - could be hashed ?
         string purpose,
         uint256 timestamp
     );
@@ -67,9 +73,9 @@ contract DecentralizedInformedConsent {
         _;
     }
 
-    // checks that only the approved intermediary account can call the function
-    modifier checkIntermediary() {
-        require(msg.sender == intermediary, "Intermediary does not match");
+    // checks if the requester has permission
+    modifier checkApprovedRequester() {
+        require(approvedRequesters[msg.sender], "Not an approved requester");
         _;
     }
 
@@ -80,33 +86,29 @@ contract DecentralizedInformedConsent {
     }
 
     // sets the contract owner and the initial intermediary address
-    constructor(address _intermediary){
-        require(_intermediary != address(0), "Invalid intermediary address");
+    constructor(){
         owner = msg.sender;
-        intermediary = _intermediary;
         nextRequestId = 0;
     }
 
-    // update the intermediary account
-    function setIntermediary(address newIntermediary) external checkOwner {
-        require(newIntermediary != address(0), "Invalid intermediary address");
-
-        address oldIntermediary = intermediary;
-        intermediary = newIntermediary;
-        
-        emit IntermediaryUpdated(oldIntermediary, newIntermediary);
-    }
+    // update the intermediary account --> not used anymore
+    // function setIntermediary(address newIntermediary) external checkOwner {
+    //    require(newIntermediary != address(0), "Invalid intermediary address");
+    //
+    //    address oldIntermediary = intermediary;
+    //    intermediary = newIntermediary;
+    //    
+    //    emit IntermediaryUpdated(oldIntermediary, newIntermediary);
+    //}
 
     // to create a new access request for a participant's off-chain data
     function requestAccess(
         address participant,
-        address requester,
         string calldata requesterName,
         string calldata dataId,
         string calldata purpose
-    ) external checkIntermediary returns (uint256 requestId) {
+    ) external checkApprovedRequester returns (uint256 requestId) {
         require(participant != address(0), "Invalid participant address");
-        require(requester != address(0), "Invalid requester address");
         require(bytes(requesterName).length > 0, "Requester name is required");
         require(bytes(dataId).length > 0, "Data ID is required");
         require(bytes(purpose).length > 0, "Purpose is required");
@@ -117,7 +119,7 @@ contract DecentralizedInformedConsent {
         requests[requestId] = AccessRequest({
             requestId: requestId,
             participant: participant,
-            requester: requester,
+            requester: msg.sender,          // requester is the msg.sender since they are directly requesting the consent, not an intermediary
             requesterName: requesterName,
             dataId: dataId,
             purpose: purpose,
@@ -133,7 +135,7 @@ contract DecentralizedInformedConsent {
         emit AccessRequested(
             requestId,
             participant,
-            requester,
+            msg.sender,
             requesterName,
             dataId,
             purpose,
@@ -141,7 +143,7 @@ contract DecentralizedInformedConsent {
         );
     }
 
-    // allows the participant to appove a pending request
+    // allows the participant to approve a pending request
     function grantConsent(uint256 requestId) external checkRequestId(requestId){
         AccessRequest storage req = requests[requestId];
 
@@ -170,5 +172,37 @@ contract DecentralizedInformedConsent {
     // check whether consent is granted for a request
     function checkAccess(uint256 requestId) external view checkRequestId(requestId) returns (bool) {
         return requests[requestId].status == ConsentStatus.Granted;
+    }
+
+    // 
+    function approveRequester(address requester) external checkOwner {
+        require(requester != address(0), "Invalid requester address");
+        require(!approvedRequesters[requester], "Requester is already approved");
+
+        approvedRequesters[requester] = true;
+        approvedRequesterList.push(requester);
+    }
+
+    function revokeRequester(address requester) external checkOwner {
+        require(approvedRequesters[requester], "Requester is not approved");
+        approvedRequesters[requester] = false;
+
+        for (uint256 i = 0; i < approvedRequesterList.length; i++){
+            if(approvedRequesterList[i] == requester){
+                approvedRequesterList[i] = approvedRequesterList[approvedRequesterList.length-1];
+                approvedRequesterList.pop();
+                break;
+            }
+        }
+    }
+
+    // get all approved requester addresses
+    function getApprovedRequesterList() external view returns (address[] memory) {
+        return approvedRequesterList;
+    }
+
+    // get all the request IDs associated with a participant
+    function getParticipantRequestIds(address participant) external view returns(uint256[] memory){
+        return participantToRequestIds[participant];
     }
 }
