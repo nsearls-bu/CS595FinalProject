@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Participant from './Participant'
 import './App.css'
+import VerifiedRequester from './VerifiedRequester'
+import UnverifiedRequester from './UnverifiedRequester'
 
 function App() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [userIsVerified, setUserIsVerified] = useState(false); // TODO: implement logic to determine if requester is already verified or not
 
   useEffect(() => {
     // Check if user is authenticated
@@ -46,10 +49,12 @@ function App() {
       {user.role === 'participant' ? (
         <Participant userAddress={user.address} />
       ) : (
-        <div className="requester-dashboard">
-          <h1>Requester Dashboard</h1>
-          <p>Coming soon...</p>
-        </div>
+        // TODO: properly differentiate between verified and unverified requesters and show appropriate dashboard
+        userIsVerified ? (
+          <VerifiedRequester userAddress={user.address} />
+        ) : (
+          <UnverifiedRequester userAddress={user.address} setFormSubmitted={setUserIsVerified} />
+        )
       )}
     </>
   )
