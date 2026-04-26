@@ -22,6 +22,7 @@ DB_HOST=localhost
 DB_USER=ernestorivera
 DB_NAME=postgres
 ```
+
 1. Deploy the contract on the sepolia testnet and that will give you the contract address
 2. Get your wallet private key using metamask and clicking on the 3 dots next to the list of your addresses and follow the steps to export your private key (make sure to add 0x prefix if it isn't given to you automatically)
 3. Create an app on alchemy and copy the RPC url that ends with your api key for the RPC URL. Go through this: https://dashboard.alchemy.com/?a=
@@ -31,6 +32,5 @@ Also, create a file: `backend/abi/DynamicConsent.json` and copy the abi that you
 
 ## Running the app
 
-1. `cd backend`
-2. `npm start`
-3. in a separate terminal can run `npm test` to test the curl GET request route
+1. in one terminal run `cd backend` then `npm start`
+2. in a separate terminal run `cd frontend` then `npm run dev`
