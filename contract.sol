@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract DecentralizedInformedConsent {
+contract DecentralizedInformedConsent is Ownable {
 
     // states of the consent request
     enum ConsentStatus {
@@ -20,21 +21,19 @@ contract DecentralizedInformedConsent {
         string purpose;
         ConsentStatus status;
         uint256 requestedAt;
-        uint256 updatedAt;
+        uint256 grantedAt;
+        uint256 revokedAt;
     }
 
-    address public owner;                   // contract owner who can update key configuration
-    // address public intermediary;         // approved intermediary account that is allowed to create requests --> not used anymore since requester is directly requesting to participant
-    uint256 public nextRequestId;           // counter that generates a unique id
+    // address public owner;                                            // contract owner who can update key configuration --> not used anymore because of Ownable
+    // address public intermediary;                                     // approved intermediary account that is allowed to create requests --> not used anymore since requester is directly requesting to participant
+    uint256 public nextRequestId;                                       // counter that generates a unique id
 
-    mapping(uint256 => AccessRequest) public requests;
-    mapping(address => uint256[]) private participantToRequestIds;
+    mapping(uint256 => AccessRequest) public requests;                  // mapping of requestId to AccessRequest
+    mapping(address => uint256[]) private participantToRequestIds;      // mapping of participant to list of requestIds
 
-    // to check if the requester is approved or not
-    mapping(address => bool) public approvedRequesters;
-
-    // approved requester list (for admin/study runner)
-    address[] public approvedRequesterList;
+    mapping(address => bool) public approvedRequesters;                 // mapping to track which requester addresses are approved
+    address[] public approvedRequesterList;                             // approved requester list (for admin/study runner)
 
     // logs when approved intermediary account changes --> not used anymore
     // event IntermediaryUpdated (
@@ -48,7 +47,7 @@ contract DecentralizedInformedConsent {
         address indexed participant,
         address indexed requester,
         string requesterName,
-        string dataId,          // what data they are using (if participant have multiple data) - could be hashed ?
+        string dataId,                      // what data is being accessed (useful if participant have multiple datasets) - could be hashed ?
         string purpose,
         uint256 timestamp
     );
@@ -67,15 +66,18 @@ contract DecentralizedInformedConsent {
         uint256 timestamp
     );
 
+    event RequesterApproved(address indexed requester);
+    event RequesterRevoked(address indexed requester);
+
     // checks that only the contract owner can call the function
-    modifier checkOwner() {
-        require(msg.sender == owner, "Owner does not match");
-        _;
-    }
+    // modifier checkOwner() {
+    //     require(msg.sender == owner, "Owner does not match");
+    //     _;
+    // }
 
     // checks if the requester has permission
     modifier checkApprovedRequester() {
-        require(approvedRequesters[msg.sender], "Not an approved requester");
+        require(approvedRequesters[msg.sender], "Requester is not approved");
         _;
     }
 
@@ -85,10 +87,41 @@ contract DecentralizedInformedConsent {
         _;
     }
 
-    // sets the contract owner and the initial intermediary address
-    constructor(){
-        owner = msg.sender;
+    // sets the initial contract owner using Ownable
+    constructor(address initialOwner) Ownable(initialOwner){
         nextRequestId = 0;
+    }
+
+    // requester management(admin/study runner)
+    function approveRequester(address requester) external onlyOwner {
+        require(requester != address(0), "Invalid address");
+        require(!approvedRequesters[requester], "Requester is already approved");
+
+        approvedRequesters[requester] = true;
+        approvedRequesterList.push(requester);
+        
+        emit RequesterApproved(requester);
+    }
+
+    function revokeRequester(address requester) external onlyOwner {
+        require(approvedRequesters[requester], "Requester is not approved");
+
+        approvedRequesters[requester] = false;
+
+        for(uint256 i = 0; i < approvedRequesterList.length; i++){
+            if(approvedRequesterList[i] == requester){
+                approvedRequesterList[i] = approvedRequesterList[approvedRequesterList.length-1];
+                approvedRequesterList.pop();
+                break;
+            }
+        }
+
+        emit RequesterRevoked(requester);
+    }
+
+    // get all approved requester addresses
+    function getApprovedRequesterList() external view returns (address[] memory) {
+        return approvedRequesterList;
     }
 
     // update the intermediary account --> not used anymore
@@ -125,7 +158,8 @@ contract DecentralizedInformedConsent {
             purpose: purpose,
             status: ConsentStatus.Pending,
             requestedAt: block.timestamp,
-            updatedAt: block.timestamp
+            grantedAt: 0,
+            revokedAt: 0
         });
 
         participantToRequestIds[participant].push(requestId);
@@ -151,7 +185,7 @@ contract DecentralizedInformedConsent {
         require(req.status == ConsentStatus.Pending, "Request is not in pending status");
 
         req.status = ConsentStatus.Granted;
-        req.updatedAt = block.timestamp;
+        req.grantedAt = block.timestamp;
 
         emit ConsentGranted(requestId, msg.sender, block.timestamp);
     }
@@ -164,7 +198,7 @@ contract DecentralizedInformedConsent {
         require(req.status == ConsentStatus.Granted, "Request is not granted");
 
         req.status = ConsentStatus.Revoked;
-        req.updatedAt = block.timestamp;
+        req.revokedAt = block.timestamp;
 
         emit ConsentRevoked(requestId, msg.sender, block.timestamp);
     }
@@ -172,33 +206,6 @@ contract DecentralizedInformedConsent {
     // check whether consent is granted for a request
     function checkAccess(uint256 requestId) external view checkRequestId(requestId) returns (bool) {
         return requests[requestId].status == ConsentStatus.Granted;
-    }
-
-    // 
-    function approveRequester(address requester) external checkOwner {
-        require(requester != address(0), "Invalid requester address");
-        require(!approvedRequesters[requester], "Requester is already approved");
-
-        approvedRequesters[requester] = true;
-        approvedRequesterList.push(requester);
-    }
-
-    function revokeRequester(address requester) external checkOwner {
-        require(approvedRequesters[requester], "Requester is not approved");
-        approvedRequesters[requester] = false;
-
-        for (uint256 i = 0; i < approvedRequesterList.length; i++){
-            if(approvedRequesterList[i] == requester){
-                approvedRequesterList[i] = approvedRequesterList[approvedRequesterList.length-1];
-                approvedRequesterList.pop();
-                break;
-            }
-        }
-    }
-
-    // get all approved requester addresses
-    function getApprovedRequesterList() external view returns (address[] memory) {
-        return approvedRequesterList;
     }
 
     // get all the request IDs associated with a participant
