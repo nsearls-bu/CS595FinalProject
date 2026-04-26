@@ -20,16 +20,22 @@ function startListener(db) {
   // listener for when consent is granted
   contract.on("ConsentGranted", async (participant, requesterID) => {
     try {
-      console.log("ConsentGranted");
+      console.log(
+        "ConsentGranted event received for participant:",
+        participant,
+        "requesterID:",
+        requesterID,
+      );
       await db.query(
-        `UPDATE consents
-                 SET granted_at = NOW()
-                 WHERE participant=$1
-                 AND requester_id=$2`,
+        `INSERT INTO consents (participant, requester_id, granted_at, revoked_at)
+         VALUES ($1, $2, NOW(), NULL)
+         ON CONFLICT (participant, requester_id) DO UPDATE
+         SET granted_at = NOW(), revoked_at = NULL`,
         [participant, requesterID],
       );
+      console.log("Consent granted recorded in DB");
     } catch (err) {
-      console.error("DB error:", err);
+      console.error("DB error on ConsentGranted:", err);
     }
   });
 

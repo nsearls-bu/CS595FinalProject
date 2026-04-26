@@ -7,6 +7,9 @@ const { Pool } = require("pg");
  *
  * use psql dyanmic_consent to get into the psql shell (psql -U wyattnapier -d dynamic_consent)
  * use \dt to check the tables within the current database
+ *
+ * NOTE: had to update consents as follow to add uniqueness constraints:
+ *  ALTER TABLE consents ADD CONSTRAINT unique_participant_requester UNIQUE (participant, requester_id);
  */
 
 const pool = new Pool({

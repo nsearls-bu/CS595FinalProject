@@ -60,8 +60,8 @@ export default function Participant({ userAddress }) {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
-      
+      const contractAddress = import.meta.env.DEPLOYED_CONSENT_CONTRACT_ADDRESS;
+
       if (!contractAddress) {
         throw new Error("Contract address not configured");
       }

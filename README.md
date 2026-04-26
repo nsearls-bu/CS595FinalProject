@@ -6,8 +6,9 @@
 
 1. create new postgresql database or just enter the psql shell
 2. if your database doesn't contain the following tables (check by running `\dt` in the psql shell) then run the following code to create them
-3. create the consents table with: `CREATE TABLE consents (id SERIAL PRIMARY KEY, participant TEXT NOT NULL, requester_id INTEGER NOT NULL, granted_at TIMESTAMP, revoked_at TIMESTAMP);`
+3. create the consents table with: `CREATE TABLE consents (id SERIAL PRIMARY KEY,participant TEXT NOT NULL, requester_id INTEGER NOT NULL, granted_at TIMESTAMP, revoked_at TIMESTAMP, CONSTRAINT unique_participant_requester UNIQUE (participant, requester_id));`
 4. create access_requests table with: `CREATE TABLE access_requests (id SERIAL PRIMARY KEY, participant TEXT NOT NULL, requester_id INTEGER NOT NULL, requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`
+5. create users table for auth with: `CREATE TABLE users (address TEXT PRIMARY KEY, role TEXT CHECK (role IN ('participant','requester')), nonce TEXT);`
 
 ### Populating your .env file
 
@@ -22,6 +23,8 @@ DB_HOST=localhost
 DB_USER=ernestorivera
 DB_NAME=postgres
 ```
+
+Note: you must also populate frontend/.env.local with the contract address value from instruction 1
 
 1. Deploy the contract on the sepolia testnet and that will give you the contract address
 2. Get your wallet private key using metamask and clicking on the 3 dots next to the list of your addresses and follow the steps to export your private key (make sure to add 0x prefix if it isn't given to you automatically)
