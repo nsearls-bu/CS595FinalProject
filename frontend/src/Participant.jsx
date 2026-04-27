@@ -3,6 +3,8 @@ import { ethers } from "ethers";
 import ABI from "./abi.json";
 import "./Participant.css";
 
+const CONTRACT_ADDRESS = import.meta.env.VITE_DEPLOYED_CONSENT_CONTRACT_ADDRESS;
+
 export default function Participant({ userAddress }) {
   const [activeConsents, setActiveConsents] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -57,38 +59,21 @@ export default function Participant({ userAddress }) {
       setTxLoading(true);
       setError("");
 
+      if (!CONTRACT_ADDRESS) throw new Error("Contract address not configured");
+
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-      const contractAddress = import.meta.env.DEPLOYED_CONSENT_CONTRACT_ADDRESS;
-
-      if (!contractAddress) {
-        throw new Error("Contract address not configured");
-      }
-
-      const contract = new ethers.Contract(contractAddress, ABI, signer);
-
-      // Grant consent for all selected requests
-      const requesterIds = Array.from(selectedRequests).map(
-        id => pendingRequests.find(r => r.id === id).requester_id
-      );
-
-      console.log("Approving consents for requester IDs:", requesterIds);
-
-      // Send individual transactions for each approval
+      // grant consent using the on-chain request_id for each selected row
       const txs = [];
-      for (const requesterId of requesterIds) {
-        try {
-          const tx = await contract.grantConsent(requesterId);
-          txs.push(tx);
-          console.log(`Consent request sent for requester ${requesterId}, tx: ${tx.hash}`);
-        } catch (err) {
-          console.error(`Failed to grant consent for requester ${requesterId}:`, err);
-          throw err;
-        }
+      for (const id of selectedRequests) {
+        const request = pendingRequests.find(r => r.id === id);
+        const tx = await contract.grantConsent(request.request_id);
+        txs.push(tx);
+        console.log(`grantConsent sent for request_id ${request.request_id}, tx: ${tx.hash}`);
       }
 
-      // Wait for all transactions to be mined
       console.log("Waiting for transactions to be mined...");
       await Promise.all(txs.map(tx => tx.wait()));
 
@@ -113,22 +98,15 @@ export default function Participant({ userAddress }) {
       setTxLoading(true);
       setError("");
 
-      // Get the request IDs to reject
       const requestIds = Array.from(selectedRequests);
-      
-      // Send rejection to backend (optional: could log to DB or just remove from access_requests)
       for (const requestId of requestIds) {
         await fetch(`http://localhost:3000/request/${requestId}`, {
           method: "DELETE"
         });
       }
 
-      // Remove selected requests from UI
-      setPendingRequests(
-        pendingRequests.filter(r => !selectedRequests.has(r.id))
-      );
+      setPendingRequests(pendingRequests.filter(r => !selectedRequests.has(r.id)));
       setSelectedRequests(new Set());
-
       console.log("Requests rejected");
     } catch (err) {
       setError(err.message);
@@ -153,9 +131,12 @@ export default function Participant({ userAddress }) {
         ) : (
           <div className="consent-list">
             {activeConsents.map((consent) => (
-              <div key={consent.requester_id} className="consent-item">
+              <div key={consent.request_id} className="consent-item">
                 <div className="consent-id">
-                  <strong>Requester ID:</strong> {consent.requester_id}
+                  <strong>{consent.requester_name}</strong>
+                </div>
+                <div className="consent-id">
+                  <strong>Purpose:</strong> {consent.purpose}
                 </div>
                 <div className="consent-date">
                   <strong>Granted:</strong>{" "}
@@ -185,9 +166,7 @@ export default function Participant({ userAddress }) {
               {pendingRequests.map((request) => (
                 <div
                   key={request.id}
-                  className={`request-item ${
-                    selectedRequests.has(request.id) ? "selected" : ""
-                  }`}
+                  className={`request-item ${selectedRequests.has(request.id) ? "selected" : ""}`}
                 >
                   <input
                     type="checkbox"
@@ -197,7 +176,13 @@ export default function Participant({ userAddress }) {
                   />
                   <div className="request-info">
                     <div className="request-id">
-                      <strong>Requester ID:</strong> {request.requester_id}
+                      <strong>{request.requester_name}</strong>
+                    </div>
+                    <div className="request-id">
+                      <strong>Purpose:</strong> {request.purpose}
+                    </div>
+                    <div className="request-id">
+                      <strong>Data:</strong> {request.data_id}
                     </div>
                     <div className="request-date">
                       <strong>Requested:</strong>{" "}

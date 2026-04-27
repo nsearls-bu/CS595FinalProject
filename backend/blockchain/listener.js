@@ -2,56 +2,47 @@
 const contract = require("./contract");
 
 function startListener(db) {
-  // listener for when access is requested by a requester (e.g. institution)
-  contract.on("AccessRequested", async (participant, requesterID) => {
+  // listener for when access is requested by a requester
+  contract.on("AccessRequested", async (requestId, participant, requester, requesterName, dataId, purpose, timestamp) => {
     try {
-      console.log("AccessRequested");
+      console.log("AccessRequested", { requestId: requestId.toString(), participant, requester });
       await db.query(
-        `INSERT INTO access_requests
-                 (participant, requester_id)
-                 VALUES ($1,$2)`,
-        [participant, requesterID],
+        `INSERT INTO access_requests (request_id, participant, requester, requester_name, data_id, purpose)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (request_id) DO NOTHING`,
+        [requestId.toString(), participant, requester, requesterName, dataId, purpose]
       );
     } catch (err) {
-      console.error("DB error:", err);
+      console.error("DB error on AccessRequested:", err);
     }
   });
 
   // listener for when consent is granted
-  contract.on("ConsentGranted", async (participant, requesterID) => {
+  contract.on("ConsentGranted", async (requestId, participant, timestamp) => {
     try {
-      console.log(
-        "ConsentGranted event received for participant:",
-        participant,
-        "requesterID:",
-        requesterID,
-      );
+      console.log("ConsentGranted", { requestId: requestId.toString(), participant });
       await db.query(
-        `INSERT INTO consents (participant, requester_id, granted_at, revoked_at)
-         VALUES ($1, $2, NOW(), NULL)
-         ON CONFLICT (participant, requester_id) DO UPDATE
-         SET granted_at = NOW(), revoked_at = NULL`,
-        [participant, requesterID],
+        `INSERT INTO consents (request_id, participant, requester, granted_at)
+         SELECT $1, participant, requester, NOW()
+         FROM access_requests WHERE request_id = $1
+         ON CONFLICT (request_id) DO UPDATE SET granted_at = NOW(), revoked_at = NULL`,
+        [requestId.toString()]
       );
-      console.log("Consent granted recorded in DB");
     } catch (err) {
       console.error("DB error on ConsentGranted:", err);
     }
   });
 
   // listener for when consent is revoked
-  contract.on("ConsentRevoked", async (participant, requesterID) => {
+  contract.on("ConsentRevoked", async (requestId, participant, timestamp) => {
     try {
-      console.log("ConsentRevoked");
+      console.log("ConsentRevoked", { requestId: requestId.toString(), participant });
       await db.query(
-        `UPDATE consents
-                 SET revoked_at = NOW()
-                 WHERE participant=$1
-                 AND requester_id=$2`,
-        [participant, requesterID],
+        `UPDATE consents SET revoked_at = NOW() WHERE request_id = $1`,
+        [requestId.toString()]
       );
     } catch (err) {
-      console.error("DB error:", err);
+      console.error("DB error on ConsentRevoked:", err);
     }
   });
 }

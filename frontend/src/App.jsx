@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Participant from './Participant'
+import Admin from './Admin'
 import './App.css'
 import VerifiedRequester from './VerifiedRequester'
 import UnverifiedRequester from './UnverifiedRequester'
@@ -8,7 +9,7 @@ import UnverifiedRequester from './UnverifiedRequester'
 function App() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
-  const [userIsVerified, setUserIsVerified] = useState(false); // TODO: implement logic to determine if requester is already verified or not
+  const [requesterStatus, setRequesterStatus] = useState(null) // null = loading, object = loaded
 
   useEffect(() => {
     // Check if user is authenticated
@@ -22,6 +23,13 @@ function App() {
     }
 
     setUser({ address: userAddress, role: userRole })
+
+    if (userRole === 'requester') {
+      fetch(`http://localhost:3000/admin/status/${userAddress}`)
+        .then(res => res.json())
+        .then(data => setRequesterStatus(data))
+        .catch(() => setRequesterStatus({ approved: false, organization: null }))
+    }
   }, [navigate])
 
   const handleLogout = () => {
@@ -46,14 +54,23 @@ function App() {
         </button>
       </header>
 
-      {user.role === 'participant' ? (
+      {user.role === 'admin' ? (
+        <Admin userAddress={user.address} />
+      ) : user.role === 'participant' ? (
         <Participant userAddress={user.address} />
       ) : (
-        // TODO: properly differentiate between verified and unverified requesters and show appropriate dashboard
-        userIsVerified ? (
-          <VerifiedRequester userAddress={user.address} />
+        requesterStatus === null ? null
+        : requesterStatus.approved ? (
+          <VerifiedRequester userAddress={user.address} requesterName={requesterStatus.organization} />
+        ) : requesterStatus.organization ? (
+          <div style={{ padding: "2rem" }}>
+            <h2>Application Pending</h2>
+            <p>Your application has been submitted and is awaiting admin approval.</p>
+          </div>
         ) : (
-          <UnverifiedRequester userAddress={user.address} setFormSubmitted={setUserIsVerified} />
+          <UnverifiedRequester userAddress={user.address} setFormSubmitted={(submitted) => {
+            if (submitted) setRequesterStatus({ approved: false, organization: "pending" })
+          }} />
         )
       )}
     </>

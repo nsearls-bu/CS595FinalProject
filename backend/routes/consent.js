@@ -9,31 +9,34 @@ router.get("/active/:participant", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT requester_id, granted_at, revoked_at
-       FROM consents
-       WHERE participant=$1 AND revoked_at IS NULL AND granted_at IS NOT NULL
-       ORDER BY granted_at DESC`,
+      `SELECT c.request_id, c.requester, a.requester_name, a.data_id, a.purpose, c.granted_at
+       FROM consents c
+       JOIN access_requests a ON a.request_id = c.request_id
+       WHERE c.participant=$1 AND c.revoked_at IS NULL AND c.granted_at IS NOT NULL
+       ORDER BY c.granted_at DESC`,
       [participant],
     );
 
     res.json(result.rows);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get("/:participant/:requesterID", async (req, res) => {
-  const { participant, requesterID } = req.params;
+router.get("/:requestId", async (req, res) => {
+  const { requestId } = req.params;
 
-  const result = await db.query(
-    `SELECT *
-         FROM consents
-         WHERE participant=$1
-         AND requester_id=$2`,
-    [participant, requesterID],
-  );
-
-  res.json(result.rows[0] || null);
+  try {
+    const result = await db.query(
+      `SELECT * FROM consents WHERE request_id=$1`,
+      [requestId],
+    );
+    res.json(result.rows[0] || null);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

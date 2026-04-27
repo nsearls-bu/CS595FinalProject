@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
+import ABI from "./abi.json";
 import "./Login.css";
+
+const CONTRACT_ADDRESS = import.meta.env.VITE_DEPLOYED_CONSENT_CONTRACT_ADDRESS;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -28,10 +31,19 @@ export default function Login() {
       if (!res.ok) throw new Error("Failed to get nonce");
       const { message } = await res.json();
 
-      // 2. sign message
+      // 2. if admin, verify contract ownership before doing anything else
+      if (role === "admin") {
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        const owner = await contract.owner();
+        if (owner.toLowerCase() !== address.toLowerCase()) {
+          throw new Error("This wallet is not the contract owner.");
+        }
+      }
+
+      // 3. sign message
       const signature = await signer.signMessage(message);
 
-      // 3. verify
+      // 4. verify
       const verifyRes = await fetch("http://localhost:3000/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -42,13 +54,16 @@ export default function Login() {
         })
       });
 
-      if (!verifyRes.ok) throw new Error("Verification failed");
+      if (!verifyRes.ok) {
+        const err = await verifyRes.json();
+        throw new Error(err.error || "Verification failed");
+      }
       const result = await verifyRes.json();
-      
+
       console.log("Login successful:", result);
       // Store auth info and redirect to homepage
       localStorage.setItem("userAddress", result.address);
-      localStorage.setItem("userRole", result.role);
+      localStorage.setItem("userRole", role === "admin" ? "admin" : result.role);
       navigate("/");
     } catch (err) {
       setError(err.message);
@@ -86,6 +101,16 @@ export default function Login() {
               disabled={loading}
             />
             <span>Requester</span>
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="admin"
+              checked={selectedRole === "admin"}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              disabled={loading}
+            />
+            <span>Admin</span>
           </label>
         </div>
 
