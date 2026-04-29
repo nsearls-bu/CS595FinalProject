@@ -88,7 +88,7 @@ contract DecentralizedInformedConsent is Ownable {
     }
 
     // sets the initial contract owner using Ownable
-    constructor(address initialOwner) Ownable(initialOwner){
+    constructor() Ownable(msg.sender){
         nextRequestId = 0;
     }
 
