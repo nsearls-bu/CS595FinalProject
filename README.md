@@ -37,3 +37,21 @@ Also, create a file: `backend/abi/DynamicConsent.json` and copy the abi that you
 
 1. in one terminal run `cd backend` then `npm start`
 2. in a separate terminal run `cd frontend` then `npm run dev`
+
+## Running with Docker
+
+1. Complete the contract deployment and ABI steps above
+2. Create `privatekey.env` at the project root (it is gitignored):
+
+   ```env
+   ADMIN_PRIVATE_KEY=0xYourWalletPrivateKey
+   RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+   CONTRACT_ADDRESS=0xYourDeployedContractAddress
+   ```
+
+3. Run `docker compose up --build`
+
+Starts all the services.
+
+- Backend: [http://localhost:3000](http://localhost:3000)
+- Frontend: [http://localhost:5173](http://localhost:5173)
