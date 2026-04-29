@@ -1,6 +1,29 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import { Loader2, Send } from "lucide-react";
 import ABI from "./abi.json";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_DEPLOYED_CONSENT_CONTRACT_ADDRESS;
 
@@ -31,8 +54,8 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
     }
   };
 
-  const toggleAll = (e) => {
-    if (e.target.checked) {
+  const toggleAll = (checked) => {
+    if (checked) {
       setSelected(new Set(participants.map((p) => p.address)));
     } else {
       setSelected(new Set());
@@ -71,12 +94,17 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
 
       const txs = [];
       for (const address of selected) {
-        const tx = await contract.requestAccess(address, requesterName, dataId, purpose);
+        const tx = await contract.requestAccess(
+          address,
+          requesterName,
+          dataId,
+          purpose,
+        );
         txs.push(tx);
         console.log(`requestAccess sent for ${address}, tx: ${tx.hash}`);
       }
 
-      await Promise.all(txs.map(tx => tx.wait()));
+      await Promise.all(txs.map((tx) => tx.wait()));
 
       setSuccess(`Access requested for ${selected.size} participant(s).`);
       setSelected(new Set());
@@ -89,82 +117,165 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
     }
   };
 
-  if (loading) return <div><p>Loading...</p></div>;
-
-  const allSelected = participants.length > 0 && selected.size === participants.length;
+  const allSelected =
+    participants.length > 0 && selected.size === participants.length;
+  const someSelected = selected.size > 0 && !allSelected;
+  const shortAddr = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
   return (
-    <div className="verified-requester-dashboard">
-      <h1>Requester Dashboard</h1>
-      <p>Logged in as: {userAddress}</p>
-
-      {error && <div style={{ color: "red" }}>{error}</div>}
-      {success && <div style={{ color: "green" }}>{success}</div>}
-
-      <h2>Request Access from Participants</h2>
-
-      <div>
-        <label>
-          Data ID:
-          <input
-            type="text"
-            value={dataId}
-            onChange={(e) => setDataId(e.target.value)}
-            disabled={requesting}
-            placeholder="e.g. genomic-dataset-1"
-          />
-        </label>
-        <label>
-          Purpose:
-          <input
-            type="text"
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-            disabled={requesting}
-            placeholder="e.g. cancer research study"
-          />
-        </label>
+    <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Requester Dashboard
+        </h1>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <Badge variant="secondary">{requesterName}</Badge>
+          <span className="font-mono">{userAddress}</span>
+        </div>
       </div>
 
-      {participants.length === 0 ? (
-        <p>No participants registered yet.</p>
-      ) : (
-        <>
-          <table>
-            <thead>
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    disabled={requesting}
-                  />
-                </th>
-                <th>Participant Address</th>
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((p) => (
-                <tr key={p.address}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(p.address)}
-                      onChange={() => toggleOne(p.address)}
-                      disabled={requesting}
-                    />
-                  </td>
-                  <td>{p.address}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button onClick={handleRequest} disabled={selected.size === 0 || requesting}>
-            {requesting ? "Requesting..." : `Request Access (${selected.size} selected)`}
-          </button>
-        </>
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
+      {success && (
+        <Alert className="mb-4 border-emerald-500/40 text-emerald-700">
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription className="text-emerald-700/90">
+            {success}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>New Access Request</CardTitle>
+            <CardDescription>
+              Describe what data you want and why. Each participant you select
+              will receive an on-chain request.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="dataId">Data ID</Label>
+              <Input
+                id="dataId"
+                value={dataId}
+                onChange={(e) => setDataId(e.target.value)}
+                disabled={requesting}
+                placeholder="e.g. genomic-dataset-1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="purpose">Purpose</Label>
+              <Input
+                id="purpose"
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                disabled={requesting}
+                placeholder="e.g. cancer research study"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Participants</CardTitle>
+            <CardDescription>
+              Select which participants to request access from.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading…
+              </div>
+            ) : participants.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                No participants registered yet.
+              </p>
+            ) : (
+              <div className="max-h-80 overflow-y-auto rounded-md border">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background">
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={
+                            allSelected
+                              ? true
+                              : someSelected
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={toggleAll}
+                          disabled={requesting}
+                          aria-label="Select all participants"
+                        />
+                      </TableHead>
+                      <TableHead>Participant Address</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {participants.map((p) => (
+                      <TableRow
+                        key={p.address}
+                        data-state={
+                          selected.has(p.address) ? "selected" : undefined
+                        }
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selected.has(p.address)}
+                            onCheckedChange={() => toggleOne(p.address)}
+                            disabled={requesting}
+                            aria-label={`Select ${p.address}`}
+                          />
+                        </TableCell>
+                        <TableCell
+                          className="font-mono text-xs"
+                          title={p.address}
+                        >
+                          {shortAddr(p.address)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="sticky bottom-4 mt-6 flex items-center justify-between gap-4 rounded-lg border bg-background/95 p-4 shadow-md backdrop-blur">
+        <div className="text-sm text-muted-foreground">
+          {selected.size > 0
+            ? `${selected.size} participant${selected.size === 1 ? "" : "s"} selected`
+            : "No participants selected"}
+        </div>
+        <Button
+          onClick={handleRequest}
+          disabled={selected.size === 0 || requesting}
+        >
+          {requesting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Requesting…
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4" />
+              Request Access
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
