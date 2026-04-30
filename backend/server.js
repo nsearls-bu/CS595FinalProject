@@ -9,11 +9,25 @@ const adminRoutes = require("./routes/admin");
 
 const db = require("./db/db");
 const startListener = require("./blockchain/listener");
+const contract = require("./blockchain/contract");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+console.log("Contract address: ", process.env.CONTRACT_ADDRESS);
+console.log("RPC URL: ", process.env.RPC_URL);
+
+app.get("/test", async(req, res) => {
+  try{
+    const nextId = await contract.nextRequestId();
+    res.json({nextRequestId: nextId.toString()});
+  }catch(err){
+    console.error(err);
+    res.status(500).json({error: err.message});
+  }
+})
 
 app.use("/request", requestRoutes);
 app.use("/consent", consentRoutes);

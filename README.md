@@ -51,7 +51,7 @@ Also, create a file: `backend/abi/DynamicConsent.json` and copy the abi that you
 
 3. Run `docker compose up --build`
 
-This starts all three services — the database schema is initialized automatically, no manual SQL setup needed.
+Starts all the services.
 
 - Backend: [http://localhost:3000](http://localhost:3000)
 - Frontend: [http://localhost:5173](http://localhost:5173)
