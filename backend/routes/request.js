@@ -29,9 +29,9 @@ router.get("/pending/:participant", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const { participant, requesterID } = req.body;
+    const { participant, requesterName, dataId, purpose } = req.body;
 
-    const tx = await contract.requestAccess(participant, requesterID);
+    const tx = await contract.requestAccess(participant, requesterName, dataId, purpose);
 
     await tx.wait();
 

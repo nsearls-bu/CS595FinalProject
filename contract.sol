@@ -88,10 +88,10 @@ contract DecentralizedInformedConsent is Ownable {
     }
 
     // sets the initial contract owner using Ownable
-    constructor(address initialOwner) Ownable(initialOwner){
+    constructor() Ownable(msg.sender){
         nextRequestId = 0;
     }
-
+    
     // requester management(admin/study runner)
     function approveRequester(address requester) external onlyOwner {
         require(requester != address(0), "Invalid address");

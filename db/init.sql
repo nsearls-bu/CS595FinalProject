@@ -14,8 +14,14 @@ CREATE TABLE IF NOT EXISTS consents (
 );
 
 CREATE TABLE IF NOT EXISTS access_requests (
-    id SERIAL PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     participant TEXT NOT NULL,
-    requester_id INTEGER NOT NULL,
-    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    requester_address TEXT NOT NULL,
+    requester_name TEXT,
+    data_id TEXT,
+    purpose TEXT,
+    status TEXT DEFAULT 'pending',
+    requested_at TIMESTAMP,
+    granted_at TIMESTAMP,
+    revoked_at TIMESTAMP
 );
