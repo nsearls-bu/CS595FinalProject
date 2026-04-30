@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db/db");
+const contract = require("../blockchain/contract");
 
 // Get pending access requests for a participant
 router.get("/pending/:participant", async (req, res) => {
@@ -30,26 +31,13 @@ router.get("/pending/:participant", async (req, res) => {
 // Get all participants
 router.get("/participants", async (req, res) => {
   try {
-<<<<<<< HEAD
     const result = await db.query(
       `SELECT address FROM users WHERE role = 'participant' ORDER BY address`
     );
     res.json(result.rows);
-=======
-    const { participant, requesterName, dataId, purpose } = req.body;
-
-    const tx = await contract.requestAccess(participant, requesterName, dataId, purpose);
-
-    await tx.wait();
-
-    res.json({
-      success: true,
-      txHash: tx.hash,
-    });
->>>>>>> main
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({error: err.message});
   }
 });
 
