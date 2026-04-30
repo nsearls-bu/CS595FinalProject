@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const contract = require("../blockchain/contract");
 const db = require("../db/db");
 
 // Get pending access requests for a participant
@@ -9,13 +8,13 @@ router.get("/pending/:participant", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT id, participant, requester_id, requested_at
+      `SELECT id, request_id, requester, requester_name, data_id, purpose, requested_at
        FROM access_requests
-       WHERE participant=$1 
+       WHERE participant=$1
        AND NOT EXISTS (
-         SELECT 1 FROM consents 
-         WHERE consents.participant=access_requests.participant 
-         AND consents.requester_id=access_requests.requester_id
+         SELECT 1 FROM consents
+         WHERE consents.request_id=access_requests.request_id
+         AND consents.revoked_at IS NULL
        )
        ORDER BY requested_at DESC`,
       [participant],
@@ -23,12 +22,20 @@ router.get("/pending/:participant", async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post("/", async (req, res) => {
+// Get all participants
+router.get("/participants", async (req, res) => {
   try {
+<<<<<<< HEAD
+    const result = await db.query(
+      `SELECT address FROM users WHERE role = 'participant' ORDER BY address`
+    );
+    res.json(result.rows);
+=======
     const { participant, requesterName, dataId, purpose } = req.body;
 
     const tx = await contract.requestAccess(participant, requesterName, dataId, purpose);
@@ -39,7 +46,9 @@ router.post("/", async (req, res) => {
       success: true,
       txHash: tx.hash,
     });
+>>>>>>> main
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -59,6 +68,7 @@ router.delete("/:requestId", async (req, res) => {
 
     res.json({ success: true, message: "Request deleted" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });

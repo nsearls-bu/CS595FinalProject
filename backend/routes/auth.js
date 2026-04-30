@@ -36,7 +36,7 @@ router.post("/verify", async (req, res) => {
   const { address, signature, role } = req.body;
 
   const result = await db.query(
-    `SELECT nonce FROM users WHERE address=$1`,
+    `SELECT nonce, role FROM users WHERE address=$1`,
     [address]
   );
 
@@ -44,7 +44,7 @@ router.post("/verify", async (req, res) => {
     return res.status(400).json({ error: "User not found" });
   }
 
-  const nonce = result.rows[0].nonce;
+  const { nonce, role: existingRole } = result.rows[0];
   const message = `Sign this message to authenticate: ${nonce}`;
 
   const recovered = ethers.verifyMessage(message, signature);
@@ -53,8 +53,13 @@ router.post("/verify", async (req, res) => {
     return res.status(401).json({ error: "Invalid signature" });
   }
 
-  // store role (participant / requester)
-  if (role) {
+  // if address already has a role, reject login attempts with a different role
+  if (existingRole && role !== existingRole) {
+    return res.status(403).json({ error: `This address is already registered as a ${existingRole}.` });
+  }
+
+  // store role (participant / requester / admin) on first login
+  if (role && !existingRole) {
     await db.query(
       `UPDATE users SET role=$1 WHERE address=$2`,
       [role, address]
@@ -71,7 +76,7 @@ router.post("/verify", async (req, res) => {
   res.json({
     success: true,
     address,
-    role
+    role: existingRole || role
   });
 });
 
