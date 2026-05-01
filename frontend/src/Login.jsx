@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_DEPLOYED_CONSENT_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -44,7 +44,9 @@ export default function Login() {
       const { message } = await res.json();
 
       if (role === "admin") {
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        console.log("CONTRACT_ADDRESS:", CONTRACT_ADDRESS);
+        console.log("Checking owner for address:", address);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
         const owner = await contract.owner();
         if (owner.toLowerCase() !== address.toLowerCase()) {
           throw new Error("This wallet is not the contract owner.");

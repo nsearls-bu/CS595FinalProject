@@ -25,6 +25,8 @@ services:
     build: ./frontend
     depends_on:
       - backend
+    environment:
+      - VITE_CONTRACT_ADDRESS=0xf8dbbd137e377660d117600e61c29f5d3545e8f6
     ports:
       - "5173:5173"
 
