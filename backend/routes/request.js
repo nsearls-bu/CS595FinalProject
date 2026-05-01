@@ -9,16 +9,11 @@ router.get("/pending/:participant", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT id, request_id, requester, requester_name, data_id, purpose, requested_at
+      `SELECT id, requester_address, requester_name, data_id, purpose, requested_at
        FROM access_requests
-       WHERE participant=$1
-       AND NOT EXISTS (
-         SELECT 1 FROM consents
-         WHERE consents.request_id=access_requests.request_id
-         AND consents.revoked_at IS NULL
-       )
+       WHERE participant=$1 AND status='pending'
        ORDER BY requested_at DESC`,
-      [participant],
+       [participant],
     );
 
     res.json(result.rows);
@@ -38,6 +33,19 @@ router.get("/participants", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({error: err.message});
+  }
+});
+
+// submit an access request
+router.post("/", async (req, res) => {
+  try{
+    const { participant, requesterName, dataId, purpose } = req.body;
+    const tx = await contract.requestAccess(participant, requesterName, dataId, purpose);
+    await tx.wait();
+    res.json({success: true, txHash: tx.hash});
+  }catch(err){
+    console.error(err);
+    res.status(500).json({error:err.message});
   }
 });
 

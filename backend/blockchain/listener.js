@@ -8,8 +8,8 @@ function startListener(db) {
       console.log("AccessRequested", requestId.toString());
       await db.query(
         `INSERT INTO access_requests (id, participant, requester_address, requester_name, data_id, purpose, status, requested_at)
-                 VALUES ($1,$2, $3, $4, $5, $6, 'pending', to_timestamp($7))
-                 ON CONFLICT (id) DO NOTHING`,
+         VALUES ($1,$2, $3, $4, $5, $6, 'pending', to_timestamp($7))
+         ON CONFLICT (id) DO NOTHING`,
         [requestId.toString(), participant, requester, requesterName, dataId, purpose, timestamp.toString()],
       );
     } catch (err) {

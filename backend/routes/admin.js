@@ -7,7 +7,8 @@ const db = require("../db/db");
 router.get("/requesters", async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, address, organization, purpose, approved FROM users WHERE role = 'requester' ORDER BY address`
+      // `SELECT id, address, organization, purpose, approved FROM users WHERE role = 'requester' ORDER BY address`
+      `SELECT address, organization, purpose, approved FROM users WHERE role = 'requester' ORDER BY address`
     );
     res.json(result.rows);
   } catch (err) {
@@ -21,7 +22,8 @@ router.get("/status/:address", async (req, res) => {
   const { address } = req.params;
   try {
     const result = await db.query(
-      `SELECT id, organization, purpose, approved FROM users WHERE address=$1`,
+      // `SELECT id, organization, purpose, approved FROM users WHERE address=$1`,
+      `SELECT address, organization, purpose, approved FROM users WHERE address=$1`,
       [address]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
@@ -48,25 +50,39 @@ router.post("/apply", async (req, res) => {
 });
 
 // Approve a requester on-chain and in the DB
-router.post("/approve/:requesterId", async (req, res) => {
-  const { requesterId } = req.params;
+// router.post("/approve/:requesterId", async (req, res) => {
+//   const { requesterId } = req.params;
 
+//   try {
+//     const result = await db.query(
+//       `SELECT address FROM users WHERE id = $1`,
+//       [requesterId]
+//     );
+//     if (result.rows.length === 0) return res.status(404).json({ error: "Requester not found" });
+
+//     const { address } = result.rows[0];
+//     const tx = await contract.approveRequester(address);
+//     await tx.wait();
+
+//     await db.query(
+//       `UPDATE users SET approved = TRUE WHERE id = $1`,
+//       [requesterId]
+//     );
+
+//     res.json({ success: true, txHash: tx.hash });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+
+router.post("/approve/:address", async (req, res) => {
+  const { address } = req.params;
   try {
-    const result = await db.query(
-      `SELECT address FROM users WHERE id = $1`,
-      [requesterId]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: "Requester not found" });
-
-    const { address } = result.rows[0];
     const tx = await contract.approveRequester(address);
     await tx.wait();
-
-    await db.query(
-      `UPDATE users SET approved = TRUE WHERE id = $1`,
-      [requesterId]
-    );
-
+    await db.query(`UPDATE users SET approved = TRUE WHERE address = $1`, [address]);
     res.json({ success: true, txHash: tx.hash });
   } catch (err) {
     console.error(err);
@@ -75,24 +91,37 @@ router.post("/approve/:requesterId", async (req, res) => {
 });
 
 // Unapprove a requester on-chain and in the DB
-router.post("/unapprove/:requesterId", async (req, res) => {
-  const { requesterId } = req.params;
-  try {
-    const result = await db.query(
-      `SELECT address FROM users WHERE id = $1`,
-      [requesterId]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: "Requester not found" });
+// router.post("/unapprove/:requesterId", async (req, res) => {
+//   const { requesterId } = req.params;
+//   try {
+//     const result = await db.query(
+//       `SELECT address FROM users WHERE id = $1`,
+//       [requesterId]
+//     );
+//     if (result.rows.length === 0) return res.status(404).json({ error: "Requester not found" });
 
-    const { address } = result.rows[0];
+//     const { address } = result.rows[0];
+//     const tx = await contract.revokeRequester(address);
+//     await tx.wait();
+
+//     await db.query(
+//       `UPDATE users SET approved = FALSE WHERE id = $1`,
+//       [requesterId]
+//     );
+
+//     res.json({ success: true, txHash: tx.hash });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+router.post("/unapprove/:address", async (req, res) => {
+  const { address } = req.params;
+  try {
     const tx = await contract.revokeRequester(address);
     await tx.wait();
-
-    await db.query(
-      `UPDATE users SET approved = FALSE WHERE id = $1`,
-      [requesterId]
-    );
-
+    await db.query(`UPDATE users SET approved = FALSE WHERE address = $1`, [address]);
     res.json({ success: true, txHash: tx.hash });
   } catch (err) {
     console.error(err);
