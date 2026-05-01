@@ -43,11 +43,11 @@ export default function Admin({ userAddress }) {
     }
   };
 
-  const handleApprove = async (id) => {
+  const handleApprove = async (address) => {
     try {
-      setApproving(id);
+      setApproving(address);
       setError("");
-      const res = await fetch(`http://localhost:3000/admin/approve/${id}`, {
+      const res = await fetch(`http://localhost:3000/admin/approve/${address}`, {
         method: "POST",
       });
       if (!res.ok) throw new Error("Approval failed");
@@ -59,11 +59,11 @@ export default function Admin({ userAddress }) {
     }
   };
 
-  const handleUnapprove = async (id) => {
+  const handleUnapprove = async (address) => {
     try {
-      setUnapproving(id);
+      setUnapproving(address);
       setError("");
-      const res = await fetch(`http://localhost:3000/admin/unapprove/${id}`, {
+      const res = await fetch(`http://localhost:3000/admin/unapprove/${address}`, {
         method: "POST",
       });
       if (!res.ok) throw new Error("Unapproval failed");
@@ -124,7 +124,7 @@ export default function Admin({ userAddress }) {
               </TableHeader>
               <TableBody>
                 {requesters.map((r) => {
-                  const isBusy = approving === r.id || unapproving === r.id;
+                  const isBusy = approving === r.address || unapproving === r.address;
                   return (
                     <TableRow key={r.address}>
                       <TableCell
@@ -151,10 +151,10 @@ export default function Admin({ userAddress }) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleUnapprove(r.id)}
+                            onClick={() => handleUnapprove(r.address)}
                             disabled={isBusy}
                           >
-                            {unapproving === r.id ? (
+                            {unapproving === r.address ? (
                               <>
                                 <Loader2 className="h-3 w-3 animate-spin" />
                                 Unapproving…
@@ -166,10 +166,10 @@ export default function Admin({ userAddress }) {
                         ) : (
                           <Button
                             size="sm"
-                            onClick={() => handleApprove(r.id)}
+                            onClick={() => handleApprove(r.address)}
                             disabled={isBusy || !r.organization}
                           >
-                            {approving === r.id ? (
+                            {approving === r.address ? (
                               <>
                                 <Loader2 className="h-3 w-3 animate-spin" />
                                 Approving…

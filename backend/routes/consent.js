@@ -9,11 +9,10 @@ router.get("/active/:participant", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT c.request_id, c.requester, a.requester_name, a.data_id, a.purpose, c.granted_at
-       FROM consents c
-       JOIN access_requests a ON a.request_id = c.request_id
-       WHERE c.participant=$1 AND c.revoked_at IS NULL AND c.granted_at IS NOT NULL
-       ORDER BY c.granted_at DESC`,
+      `SELECT id, requester_address, requester_name, data_id, purpose, granted_at
+       FROM access_requests
+       WHERE participant=$1 AND status='granted'
+       ORDER BY granted_at DESC`,
       [participant],
     );
 
