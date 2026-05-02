@@ -74,7 +74,7 @@ export default function Participant({ userAddress }) {
       const txs = [];
       for (const id of selectedRequests) {
         const request = pendingRequests.find((r) => r.id === id);
-        const tx = await contract.grantConsent(request.request_id);
+        const tx = await contract.grantConsent((Number(request.id)));
         txs.push(tx);
         console.log(
           `grantConsent sent for request_id ${request.request_id}, tx: ${tx.hash}`,
