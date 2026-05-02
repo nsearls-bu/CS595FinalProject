@@ -34,6 +34,7 @@ router.get("/nonce/:address", async (req, res) => {
 // verify that the signature is valid for the given address and nonce
 router.post("/verify", async (req, res) => {
   const { address, signature, role } = req.body;
+  console.log("ROLE IN ADMING: ", role)
 
   const result = await db.query(
     `SELECT nonce, role FROM users WHERE address=$1`,

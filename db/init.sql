@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
     address TEXT PRIMARY KEY,
-    role TEXT CHECK (role IN ('participant', 'requester')),
+    role TEXT CHECK (role IN ('participant', 'requester', 'admin')),
     nonce TEXT,
     organization TEXT,
     purpose TEXT,

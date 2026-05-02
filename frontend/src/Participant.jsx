@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_DEPLOYED_CONSENT_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 export default function Participant({ userAddress }) {
   const [activeConsents, setActiveConsents] = useState([]);
@@ -74,7 +74,7 @@ export default function Participant({ userAddress }) {
       const txs = [];
       for (const id of selectedRequests) {
         const request = pendingRequests.find((r) => r.id === id);
-        const tx = await contract.grantConsent(request.request_id);
+        const tx = await contract.grantConsent((Number(request.id)));
         txs.push(tx);
         console.log(
           `grantConsent sent for request_id ${request.request_id}, tx: ${tx.hash}`,

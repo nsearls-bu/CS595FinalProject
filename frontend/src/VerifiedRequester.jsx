@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_DEPLOYED_CONSENT_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 export default function VerifiedRequester({ userAddress, requesterName }) {
   const [participants, setParticipants] = useState([]);
