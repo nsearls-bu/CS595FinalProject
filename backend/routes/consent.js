@@ -28,7 +28,7 @@ router.get("/:requestId", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT * FROM consents WHERE request_id=$1`,
+      `SELECT * FROM access_requests WHERE id=$1`,
       [requestId],
     );
     res.json(result.rows[0] || null);
