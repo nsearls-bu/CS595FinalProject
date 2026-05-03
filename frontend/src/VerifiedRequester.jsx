@@ -27,19 +27,27 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
-export default function VerifiedRequester({ userAddress, requesterName }) {
+export default function VerifiedRequester({ userAddress, approvedLabs }) {
   const [participants, setParticipants] = useState([]);
   const [selected, setSelected] = useState(new Set());
+  const [selectedLab, setSelectedLab] = useState(
+    approvedLabs?.length > 0 ? approvedLabs[0].organization : ""
+  );
   const [dataId, setDataId] = useState("");
   const [purpose, setPurpose] = useState("");
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [myRequests, setMyRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
 
   useEffect(() => {
     fetchParticipants();
-  }, []);
+    fetchMyRequests();
+    const interval = setInterval(fetchMyRequests, 10000);
+    return () => clearInterval(interval);
+  }, [userAddress]);
 
   const fetchParticipants = async () => {
     try {
@@ -51,6 +59,20 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyRequests = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/request/participant-status-for-requester/${userAddress}`,
+      );
+      if (!res.ok) throw new Error("Failed to fetch your requests");
+      setMyRequests(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRequestsLoading(false);
     }
   };
 
@@ -81,6 +103,10 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
       setError("Data ID and purpose are required.");
       return;
     }
+    if (!selectedLab) {
+      setError("Please select a lab.");
+      return;
+    }
     try {
       setRequesting(true);
       setError("");
@@ -96,7 +122,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
       for (const address of selected) {
         const tx = await contract.requestAccess(
           address,
-          requesterName,
+          selectedLab,
           dataId,
           purpose,
         );
@@ -106,10 +132,11 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
 
       await Promise.all(txs.map((tx) => tx.wait()));
 
-      setSuccess(`Access requested for ${selected.size} participant(s).`);
+      setSuccess(`Access requested for ${selected.size} participant(s) as ${selectedLab}.`);
       setSelected(new Set());
       setDataId("");
       setPurpose("");
+      fetchMyRequests();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -121,6 +148,24 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
     participants.length > 0 && selected.size === participants.length;
   const someSelected = selected.size > 0 && !allSelected;
   const shortAddr = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+  const fmtDate = (d) => (d ? new Date(d).toLocaleString() : "—");
+
+  const statusBadge = (status) => {
+    if (status === "granted") {
+      return (
+        <Badge className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10">
+          Granted
+        </Badge>
+      );
+    }
+    if (status === "revoked")
+      return (
+        <Badge className="border-red-500/40 bg-red-500/10 text-red-700 hover:bg-red-500/10">
+          Revoked
+        </Badge>
+      );
+    return <Badge variant="secondary">Pending</Badge>;
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -129,7 +174,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
           Requester Dashboard
         </h1>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <Badge variant="secondary">{requesterName}</Badge>
+          <Badge variant="secondary">{selectedLab}</Badge>
           <span className="font-mono">{userAddress}</span>
         </div>
       </div>
@@ -154,11 +199,28 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
           <CardHeader>
             <CardTitle>New Access Request</CardTitle>
             <CardDescription>
-              Describe what data you want and why. Each participant you select
+              Select which lab you are requesting on behalf of, describe what data you want and why. Each participant you select
               will receive an on-chain request.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="lab">Requesting as</Label>
+              <select
+                id="lab"
+                value={selectedLab}
+                onChange={(e) => setSelectedLab(e.target.value)}
+                disabled={requesting}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {approvedLabs.map((lab) => (
+                  <option key={lab.id} value={lab.organization}>
+                    {lab.organization}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="dataId">Data ID</Label>
               <Input
@@ -252,6 +314,74 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle>My Requests</CardTitle>
+              <CardDescription>
+                Status of every access request you've sent. Updates when participants respond on-chain.
+              </CardDescription>
+            </div>
+            <Badge variant="secondary">{myRequests.length}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {requestsLoading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading…
+            </div>
+          ) : myRequests.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              You haven't sent any requests yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Participant</TableHead>
+                    <TableHead>Lab</TableHead>
+                    <TableHead>Data ID</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Resolved</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {myRequests.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell
+                        className="font-mono text-xs"
+                        title={r.participant}
+                      >
+                        {shortAddr(r.participant)}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.requester_name}</TableCell>
+                      <TableCell className="text-sm">{r.data_id}</TableCell>
+                      <TableCell className="text-sm">{r.purpose}</TableCell>
+                      <TableCell>{statusBadge(r.status)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {fmtDate(r.requested_at)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {r.status === "granted"
+                          ? `Granted ${fmtDate(r.granted_at)}`
+                          : r.status === "revoked"
+                            ? `Revoked ${fmtDate(r.revoked_at)}`
+                            : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="sticky bottom-4 mt-6 flex items-center justify-between gap-4 rounded-lg border bg-background/95 p-4 shadow-md backdrop-blur">
         <div className="text-sm text-muted-foreground">
