@@ -43,11 +43,11 @@ export default function Admin({ userAddress }) {
     }
   };
 
-  const handleApprove = async (address) => {
+  const handleApprove = async (id) => {
     try {
-      setApproving(address);
+      setApproving(id);
       setError("");
-      const res = await fetch(`http://localhost:3000/admin/approve/${address}`, {
+      const res = await fetch(`http://localhost:3000/admin/approve/${id}`, {
         method: "POST",
       });
       if (!res.ok) throw new Error("Approval failed");
@@ -59,11 +59,11 @@ export default function Admin({ userAddress }) {
     }
   };
 
-  const handleUnapprove = async (address) => {
+  const handleUnapprove = async (id) => {
     try {
-      setUnapproving(address);
+      setUnapproving(id);
       setError("");
-      const res = await fetch(`http://localhost:3000/admin/unapprove/${address}`, {
+      const res = await fetch(`http://localhost:3000/admin/unapprove/${id}`, {
         method: "POST",
       });
       if (!res.ok) throw new Error("Unapproval failed");
@@ -115,7 +115,7 @@ export default function Admin({ userAddress }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Address</TableHead>
+                  <TableHead>Requester Address</TableHead>
                   <TableHead>Organization</TableHead>
                   <TableHead>Purpose</TableHead>
                   <TableHead>Status</TableHead>
@@ -124,14 +124,14 @@ export default function Admin({ userAddress }) {
               </TableHeader>
               <TableBody>
                 {requesters.map((r) => {
-                  const isBusy = approving === r.address || unapproving === r.address;
+                  const isBusy = approving === r.id || unapproving === r.id;
                   return (
-                    <TableRow key={r.address}>
+                    <TableRow key={r.id}>
                       <TableCell
                         className="font-mono text-xs"
-                        title={r.address}
+                        title={r.requester_address}
                       >
-                        {shortAddr(r.address)}
+                        {shortAddr(r.requester_address)}
                       </TableCell>
                       <TableCell>{r.organization || "—"}</TableCell>
                       <TableCell className="max-w-xs truncate" title={r.purpose}>
@@ -151,10 +151,10 @@ export default function Admin({ userAddress }) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleUnapprove(r.address)}
+                            onClick={() => handleUnapprove(r.id)}
                             disabled={isBusy}
                           >
-                            {unapproving === r.address ? (
+                            {unapproving === r.id ? (
                               <>
                                 <Loader2 className="h-3 w-3 animate-spin" />
                                 Unapproving…
@@ -166,10 +166,10 @@ export default function Admin({ userAddress }) {
                         ) : (
                           <Button
                             size="sm"
-                            onClick={() => handleApprove(r.address)}
+                            onClick={() => handleApprove(r.id)}
                             disabled={isBusy || !r.organization}
                           >
-                            {approving === r.address ? (
+                            {approving === r.id ? (
                               <>
                                 <Loader2 className="h-3 w-3 animate-spin" />
                                 Approving…

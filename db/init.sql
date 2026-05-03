@@ -28,3 +28,12 @@ CREATE TABLE IF NOT EXISTS access_requests (
     granted_at TIMESTAMP,
     revoked_at TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS applications (
+    id SERIAL PRIMARY KEY,
+    requester_address TEXT NOT NULL REFERENCES users(address),
+    organization TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    approved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

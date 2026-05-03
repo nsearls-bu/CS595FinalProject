@@ -27,9 +27,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
-export default function VerifiedRequester({ userAddress, requesterName }) {
+export default function VerifiedRequester({ userAddress, approvedLabs }) {
   const [participants, setParticipants] = useState([]);
   const [selected, setSelected] = useState(new Set());
+  const [selectedLab, setSelectedLab] = useState(
+    approvedLabs?.length > 0 ? approvedLabs[0].organization : ""
+  );
   const [dataId, setDataId] = useState("");
   const [purpose, setPurpose] = useState("");
   const [loading, setLoading] = useState(true);
@@ -102,6 +105,10 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
       setError("Data ID and purpose are required.");
       return;
     }
+    if (!selectedLab) {
+      setError("Please select a lab.");
+      return;
+    }
     try {
       setRequesting(true);
       setError("");
@@ -117,7 +124,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
       for (const address of selected) {
         const tx = await contract.requestAccess(
           address,
-          requesterName,
+          selectedLab,
           dataId,
           purpose,
         );
@@ -127,7 +134,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
 
       await Promise.all(txs.map((tx) => tx.wait()));
 
-      setSuccess(`Access requested for ${selected.size} participant(s).`);
+      setSuccess(`Access requested for ${selected.size} participant(s) as ${selectedLab}.`);
       setSelected(new Set());
       setDataId("");
       setPurpose("");
@@ -153,13 +160,12 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
         </Badge>
       );
     }
-    if (status === "revoked") {
+    if (status === "revoked")
       return (
         <Badge className="border-red-500/40 bg-red-500/10 text-red-700 hover:bg-red-500/10">
           Revoked
         </Badge>
       );
-    }
     return <Badge variant="secondary">Pending</Badge>;
   };
 
@@ -170,7 +176,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
           Requester Dashboard
         </h1>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <Badge variant="secondary">{requesterName}</Badge>
+          <Badge variant="secondary">{selectedLab}</Badge>
           <span className="font-mono">{userAddress}</span>
         </div>
       </div>
@@ -195,11 +201,28 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
           <CardHeader>
             <CardTitle>New Access Request</CardTitle>
             <CardDescription>
-              Describe what data you want and why. Each participant you select
+              Select which lab you are requesting on behalf of, describe what data you want and why. Each participant you select
               will receive an on-chain request.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="lab">Requesting as</Label>
+              <select
+                id="lab"
+                value={selectedLab}
+                onChange={(e) => setSelectedLab(e.target.value)}
+                disabled={requesting}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {approvedLabs.map((lab) => (
+                  <option key={lab.id} value={lab.organization}>
+                    {lab.organization}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="dataId">Data ID</Label>
               <Input
@@ -322,6 +345,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Participant</TableHead>
+                    <TableHead>Lab</TableHead>
                     <TableHead>Data ID</TableHead>
                     <TableHead>Purpose</TableHead>
                     <TableHead>Status</TableHead>
@@ -338,6 +362,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
                       >
                         {shortAddr(r.participant)}
                       </TableCell>
+                      <TableCell className="text-sm">{r.requester_name}</TableCell>
                       <TableCell className="text-sm">{r.data_id}</TableCell>
                       <TableCell className="text-sm">{r.purpose}</TableCell>
                       <TableCell>{statusBadge(r.status)}</TableCell>

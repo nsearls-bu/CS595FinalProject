@@ -34,15 +34,6 @@ function App() {
     }
 
     setUser({ address: userAddress, role: userRole })
-
-    if (userRole === 'requester') {
-      fetch(`http://localhost:3000/admin/status/${userAddress}`)
-        .then((res) => res.json())
-        .then((data) => setRequesterStatus(data))
-        .catch(() =>
-          setRequesterStatus({ approved: false, organization: null }),
-        )
-    }
   }, [navigate])
 
   const handleLogout = () => {
@@ -76,44 +67,11 @@ function App() {
         <Admin userAddress={user.address} />
       ) : user.role === 'participant' ? (
         <Participant userAddress={user.address} />
-      ) : requesterStatus === null ? null : requesterStatus.approved ? (
-        <VerifiedRequester
-          userAddress={user.address}
-          requesterName={requesterStatus.organization}
-        />
-      ) : requesterStatus.organization ? (
-        <div className="mx-auto max-w-xl px-4 py-16">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Application Pending
-                </CardTitle>
-                <Badge variant="secondary">Pending review</Badge>
-              </div>
-              <CardDescription>
-                Your application has been submitted and is waiting for an admin
-                to review and approve it.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              You'll get access to the requester dashboard automatically once
-              an admin approves you on-chain. Feel free to close this tab.
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <UnverifiedRequester
-          userAddress={user.address}
-          setFormSubmitted={(submitted) => {
-            if (submitted)
-              setRequesterStatus({ approved: false, organization: 'pending' })
-          }}
-        />
-      )}
-    </div>
-  )
-}
+      ) : user.role === 'requester' ? (
+        <UnverifiedRequester userAddress={user.address} />
+      ) : null}
+      </div>
+    )
+  }
 
 export default App
