@@ -23,6 +23,24 @@ router.get("/pending/:participant", async (req, res) => {
   }
 });
 
+// get requestor status of patinets
+router.get("/participant-status-for-requester/:requester", async (req, res) => {
+  const { requester } = req.params;
+  try {
+    const result = await db.query(
+      `SELECT id, participant, requester_address, requester_name, data_id, purpose, status, requested_at, granted_at, revoked_at
+       FROM access_requests
+       WHERE requester_address = $1
+       ORDER BY requested_at DESC`,
+      [requester],
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get all participants
 router.get("/participants", async (req, res) => {
   try {

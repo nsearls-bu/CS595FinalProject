@@ -36,10 +36,17 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [myRequests, setMyRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
 
   useEffect(() => {
     fetchParticipants();
-  }, []);
+    fetchMyRequests();
+
+    // we wanna see in the ui if the participant granted or revoked
+    const interval = setInterval(fetchMyRequests, 10000);
+    return () => clearInterval(interval);
+  }, [userAddress]);
 
   const fetchParticipants = async () => {
     try {
@@ -51,6 +58,20 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyRequests = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/request/participant-status-for-requester/${userAddress}`,
+      );
+      if (!res.ok) throw new Error("Failed to fetch your requests");
+      setMyRequests(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRequestsLoading(false);
     }
   };
 
@@ -110,6 +131,7 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
       setSelected(new Set());
       setDataId("");
       setPurpose("");
+      fetchMyRequests();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -121,6 +143,25 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
     participants.length > 0 && selected.size === participants.length;
   const someSelected = selected.size > 0 && !allSelected;
   const shortAddr = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+  const fmtDate = (d) => (d ? new Date(d).toLocaleString() : "—");
+
+  const statusBadge = (status) => {
+    if (status === "granted") {
+      return (
+        <Badge className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10">
+          Granted
+        </Badge>
+      );
+    }
+    if (status === "revoked") {
+      return (
+        <Badge className="border-red-500/40 bg-red-500/10 text-red-700 hover:bg-red-500/10">
+          Revoked
+        </Badge>
+      );
+    }
+    return <Badge variant="secondary">Pending</Badge>;
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -252,6 +293,72 @@ export default function VerifiedRequester({ userAddress, requesterName }) {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle>My Requests</CardTitle>
+              <CardDescription>
+                Status of every access request you've sent. Updates when participants respond on-chain.
+              </CardDescription>
+            </div>
+            <Badge variant="secondary">{myRequests.length}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {requestsLoading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading…
+            </div>
+          ) : myRequests.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              You haven't sent any requests yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Participant</TableHead>
+                    <TableHead>Data ID</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Resolved</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {myRequests.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell
+                        className="font-mono text-xs"
+                        title={r.participant}
+                      >
+                        {shortAddr(r.participant)}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data_id}</TableCell>
+                      <TableCell className="text-sm">{r.purpose}</TableCell>
+                      <TableCell>{statusBadge(r.status)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {fmtDate(r.requested_at)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {r.status === "granted"
+                          ? `Granted ${fmtDate(r.granted_at)}`
+                          : r.status === "revoked"
+                            ? `Revoked ${fmtDate(r.revoked_at)}`
+                            : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="sticky bottom-4 mt-6 flex items-center justify-between gap-4 rounded-lg border bg-background/95 p-4 shadow-md backdrop-blur">
         <div className="text-sm text-muted-foreground">
