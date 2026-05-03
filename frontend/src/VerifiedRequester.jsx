@@ -45,6 +45,8 @@ export default function VerifiedRequester({ userAddress, approvedLabs }) {
   useEffect(() => {
     fetchParticipants();
     fetchMyRequests();
+
+    // we wanna see in the ui if the participant granted or revoked
     const interval = setInterval(fetchMyRequests, 10000);
     return () => clearInterval(interval);
   }, [userAddress]);
